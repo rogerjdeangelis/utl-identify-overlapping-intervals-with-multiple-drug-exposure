@@ -1,5 +1,4 @@
 # utl-identify-overlapping-intervals-with-multiple-drug-exposure
-Identify overlapping intervals with multiple drug exposure
     Identify overlapping intervals with multiple drug exposure
 
          Two Solutions
@@ -15,6 +14,8 @@ Identify overlapping intervals with multiple drug exposure
                 Nice use of comb and lexcomb to enumerate combinations
                 ncomb = comb(n, nDrugs);
                 lexcomb(j, nDrugs, of d{*});
+
+                see Mark Keintz 'proc optnet' code for inking (link below)
 
     The R code seems daunting but most of it is just to get data in and out of R.
     IRanges and IGraph are solid packages with many options, including
@@ -127,6 +128,11 @@ Identify overlapping intervals with multiple drug exposure
                     |_|
     ;
 
+
+    *******************************************************
+    1. Using R IRanges(for overlaps) and IGraph(linking)  *
+    *******************************************************
+
     Observations that overlab
 
     SD1.WANT total obs=3
@@ -148,13 +154,24 @@ Identify overlapping intervals with multiple drug exposure
        1       B:D:F
        1       A:E
 
+    ******************************************************
+    2. Pure SAS does not do the final linking by PGStats *
+    ******************************************************
+
+     WORK.WANT total obs=3
+
+      ID    NDRUGS    DRUGLIST    DURATION    STARTDATE    ENDDATE
+
+       1       2        A-E          19         18322       18340
+       1       2        B-D          31         17929       17959
+       1       2        B-F          27         17962       17988
     *
      _ __  _ __ ___   ___ ___  ___ ___
     | '_ \| '__/ _ \ / __/ _ \/ __/ __|
     | |_) | | | (_) | (_|  __/\__ \__ \
     | .__/|_|  \___/ \___\___||___/___/
     |_|
-    ;  \
+    ;
 
     *******************************************************
     1. Using R IRanges(for overlaps) and IGraph(linking)  *
@@ -339,6 +356,4 @@ Identify overlapping intervals with multiple drug exposure
     format startDate endDate yymmdd10.;
     keep id nDrugs drugList startDate endDate duration;
     run;
-
-
 
