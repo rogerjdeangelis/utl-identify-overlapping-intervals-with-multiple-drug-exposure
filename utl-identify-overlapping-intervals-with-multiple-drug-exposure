@@ -14,7 +14,7 @@ Identify overlapping intervals with multiple drug exposure
             ncomb = comb(n, nDrugs);
             lexcomb(j, nDrugs, of d{*});
 
-The R code seems dauting but most of it is just to get data in and out of R.
+The R code seems daunting but most of it is just to get data in and out of R.
 IRanges and IGraph are solid packages with many options, including
 by processing. It looks like they are optimized for speed.
 
