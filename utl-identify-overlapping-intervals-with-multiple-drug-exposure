@@ -1,0 +1,340 @@
+Identify overlapping intervals with multiple drug exposure
+
+     Two Solutions
+
+         1. Using R IRanges(for overlaps) and IGraph(linking)
+            Only does ID = 1
+
+         2. Pure SAS does not do the final linking
+
+            PGStats
+            https://communities.sas.com/t5/user/viewprofilepage/user-id/462
+
+            Nice use of comb and lexcomb to enumerate combinations
+            ncomb = comb(n, nDrugs);
+            lexcomb(j, nDrugs, of d{*});
+
+The R code seems dauting but most of it is just to get data in and out of R.
+IRanges and IGraph are solid packages with many options, including
+by processing. It looks like they are optimized for speed.
+
+github
+https://tinyurl.com/y6hh73qt
+https://github.com/rogerjdeangelis/utl-identify-overlapping-intervals-with-multiple-drug-exposure
+
+related to
+https://tinyurl.com/y4mlzjrq
+https://communities.sas.com/t5/SAS-Programming/How-to-identify-concurrent-use-of-drugs/m-p/560737
+
+R IRanges
+http://lutgw1.lunet.edu/usr/lib64/R/library/IRanges/html/findOverlaps-methods.html
+
+SAS Proc Opnet fro linking
+Keintz, Mark
+mkeintz@wharton.upenn.edu
+https://tinyurl.com/yxfalyfb
+https://github.com/rogerjdeangelis/utl_identify_linked_pairs_in_a_table_across_rows
+
+*_                   _
+(_)_ __  _ __  _   _| |_
+| | '_ \| '_ \| | | | __|
+| | | | | |_) | |_| | |_
+|_|_| |_| .__/ \__,_|\__|
+        |_|
+;
+
+* Observation number to drug * not neede for SAS solution;
+proc format;
+  value $num2drug
+    "1" ="B"
+    "2" ="D"
+    "3" ="F"
+    "4" ="A"
+    "5" ="E"
+    "6" ="C"
+    "7" ="C"
+;
+run;quit;
+
+options validvarname=upcase;
+libname sd1 "d:/sd1";
+data sd1.have;
+   *format START mmddyy. END mmddyy.;
+   input ID DRUG $ START :mmddyy. DAYS_SUPP END :mmddyy.;
+cards4;;
+1 B 1/1/09 90 4/1/09
+1 D 2/1/09 30 3/3/09
+1 F 3/6/09 30 6/5/09
+1 A 2/17/10 30 3/19/10
+1 E 3/1/10 90 5/30/10
+1 C 7/9/11 60 9/7/11
+1 C 5/6/12 90 8/4/12
+;;;;
+run;quit;
+
+SD1.HAVE total obs=7
+                                             DAYS_
+Obs     START        END       ID    DRUG     SUPP
+
+ 1     01/01/09    04/01/09     1     B        90
+ 2     02/01/09    03/03/09     1     D        30
+ 3     03/06/09    06/05/09     1     F        30
+ 4     02/17/10    03/19/10     1     A        30
+ 5     03/01/10    05/30/10     1     E        90
+ 6     07/09/11    09/07/11     1     C        60
+ 7     05/06/12    08/04/12     1     C        90
+
+*           _
+ _ __ _   _| | ___  ___
+| '__| | | | |/ _ \/ __|
+| |  | |_| | |  __/\__ \
+|_|   \__,_|_|\___||___/
+
+;
+
+Dates shown as number of days since 1/1/1960 (basis for SAS dates)
+
+HERE ARE THE ONLY OVERLAPS
+
+    Drug   Start    End      Start    End
+    ====   =====    ===      =====    ===
+ 1  B      17898 - 17988
+ 2                        D   17929 - 17959  OVERLAP  1-> 2
+ 3                        F   17962 - 18053  OVERLAP  1-> 3
+ 4                        A   18310 - 18340
+ 5                        E   18322 - 18412
+ 6                        C   18817 - 18877
+ 7                        C   19119 - 19209
+
+
+   Drug   Start    End      Start    End
+   ====   =====    ===      =====    ===
+ 1                        B   17898 - 17988
+ 2                        D   17929 - 17959
+ 3                        B   18023 - 18053
+ 4  A   18310 - 18340
+ 5                        E   18322 - 18412  OVERLAP  4-> 5
+ 6                        C   18817 - 18877
+ 7                        C   19119 - 19209
+
+*            _               _
+  ___  _   _| |_ _ __  _   _| |_ ___
+ / _ \| | | | __| '_ \| | | | __/ __|
+| (_) | |_| | |_| |_) | |_| | |_\__ \
+ \___/ \__,_|\__| .__/ \__,_|\__|___/
+                |_|
+;
+
+Observations that overlab
+
+SD1.WANT total obs=3
+
+ Observations that Overlap
+
+ OVER1    OVER2
+
+   1        2      Drug-B and Drug-D
+   1        3      Drug-B and Drug-F
+
+   4        5      Drug-A and Drug-E ( second occurance
+                                       or Drug-A does not overlap Drug-F)
+
+WORK.WANT total obs=2
+
+  ID    DRUGOVERLAP
+
+   1       B:D:F
+   1       A:E
+
+*
+ _ __  _ __ ___   ___ ___  ___ ___
+| '_ \| '__/ _ \ / __/ _ \/ __/ __|
+| |_) | | | (_) | (_|  __/\__ \__ \
+| .__/|_|  \___/ \___\___||___/___/
+|_|
+;  \
+
+*******************************************************
+1. Using R IRanges(for overlaps) and IGraph(linking)  *
+*******************************************************
+
+options validvarname=upcase;
+libname sd1 "d:/sd1";
+data sd1.have;
+   *format START mmddyy. END mmddyy.;
+   input ID DRUG $ START :mmddyy. DAYS_SUPP END :mmddyy.;
+cards4;;
+1 B 1/1/09 90 4/1/09
+1 D 2/1/09 30 3/3/09
+1 F 3/6/09 30 6/5/09
+1 A 2/17/10 30 3/19/10
+1 E 3/1/10 90 5/30/10
+1 C 7/9/11 60 9/7/11
+1 C 5/6/12 90 8/4/12
+;;;;
+run;quit;
+
+
+%utlfkil(d:/xpt/want.xpt);
+
+proc format;
+  value $num2drug
+    "1" ="B"
+    "2" ="D"
+    "3" ="F"
+    "4" ="A"
+    "5" ="E"
+    "6" ="C"
+    "7" ="C"
+;
+run;quit;
+
+%utl_submit_r64('
+     library(SASxport);
+     library(data.table);
+     library(IRanges);
+     library(haven);
+     have<-as.data.table(read_sas("d:/sd1/have.sas7bdat")[,c(3,5)]);
+     colnames(have)=c("start","end");
+     rng <-IRanges(have$start,have$end);
+     want<-as.data.table(findOverlaps(rng,drop.redundant=TRUE,drop.self=TRUE));
+     colnames(want)<-c("OVER1","OVER2");
+     want;
+     write.xport(want,file="d:/xpt/want.xpt");
+  ');
+
+options validvarname=upcase;
+libname sd1 "d:/sd1";
+libname xpt xport "d:/xpt/want.xpt";
+data sd1.want ;
+  length FTO $7;
+  set xpt.want;
+  FTO=cats('C0',over1,':','C0',over2);
+run;quit;
+libname xpt clear;
+
+%utlfkil(d:/xpt/want.xpt);
+
+ %utl_submit_r64('
+    library(SASxport);
+    library(igraph);
+    library(haven);
+    data <-read_sas("d:/sd1/want.sas7bdat")[,1];
+    data;
+    data<-as.character(data$FTO);
+    spl <- strsplit(data,":");
+    combspl <- data.frame(
+      grp = rep(seq_along(spl),lengths(spl)),
+      val = unlist(spl));
+    combspl;
+    cl <- clusters(graph.data.frame(combspl))$membership[-(1:length(spl))];
+    cl;
+    dat <- data.frame(cl);
+    dat[,2] <- row.names(dat);
+    dat;
+    want <- character(0);
+    for (i in 1:max(cl)) {
+      want[i] <- paste(paste0(dat[(dat[,1] == i),][,2]), collapse=":");
+    };
+    want;
+    write.xport(dat,file="d:/xpt/want.xpt");
+ ');
+
+libname xpt xport "d:/xpt/want.xpt";
+data want;
+  retain id 1 drugOverlap;
+  length drugOverlap $16;
+  set xpt.dat;
+  by cl;
+  drug = put(substr( v2,3),$num2drug.);
+  drugOverlap = catx(':',drugOverlap,drug);
+  if last.cl then do;
+     output;
+     drugOverlap='';
+  end;
+  drop cl v2 drug;
+run;quit;
+libname xpt clear;
+
+
+Up to 40 obs from WANT total obs=2
+
+Obs    ID    DRUGOVERLAP
+
+ 1      1       B:D:F
+ 2      1       A:E
+
+
+
+********************************************
+2. Pure SAS does not do the final linking  *
+********************************************
+
+data have;
+   input ID DRUG $ START_DT :mmddyy. DAYS_SUPP END_DT :mmddyy.;
+cards4;;
+1 B 1/1/09 90 4/1/09
+1 D 2/1/09 30 3/3/09
+1 F 3/6/09 30 6/5/09
+1 A 2/17/10 30 3/19/10
+1 E 3/1/10 90 5/30/10
+1 C 7/9/11 60 9/7/11
+1 C 5/6/12 90 8/4/12
+;;;;
+run;quit;
+
+data days;
+set have;
+dum = 1;
+do day = start_dt to end_dt;
+    output;
+    end;
+format day yymmdd10.;
+keep id drug day;
+run;
+
+proc sort data=days; by id day drug; run;
+
+data dayTable;
+array d{32} $10;
+length drugList $64;
+do n = 1 by 1 until(last.day);
+    set days; by id day;
+    d{n} = drug;
+    end;
+do nDrugs = 2 to n;
+    ncomb = comb(n, nDrugs);
+    do j = 1 to ncomb;
+        rc = lexcomb(j, nDrugs, of d{*});
+        call missing(drugList);
+        do k = 1 to nDrugs;
+            drugList = catx("-", drugList, d{k});
+            end;
+        output;
+        end;
+    end;
+keep id day nDrugs drugList;
+run;
+
+proc sort data=dayTable; by id nDrugs drugList day; run;
+
+data dayTableSeq;
+retain seq;
+set dayTable; by id nDrugs drugList;
+if first.drugList or day-1 ne lag(day) then seq+1;
+run;
+
+data want;
+length id nDrugs 8 drugList $64 duration startDate endDate 8;
+retain startDate;
+set dayTableSeq; by id nDrugs drugList seq;
+if first.seq then startDate = day;
+if last.seq then do;
+    endDate = day;
+    duration = endDate - startDate + 1;
+    /*if duration >= 28 then*/ output;
+    end;
+format startDate endDate yymmdd10.;
+keep id nDrugs drugList startDate endDate duration;
+run;
+
