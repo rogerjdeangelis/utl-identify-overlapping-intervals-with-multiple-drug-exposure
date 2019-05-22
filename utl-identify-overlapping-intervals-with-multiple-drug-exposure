@@ -14,6 +14,8 @@ Identify overlapping intervals with multiple drug exposure
             ncomb = comb(n, nDrugs);
             lexcomb(j, nDrugs, of d{*});
 
+            see Mark Keintz 'proc optnet' code for inking (link below)
+
 The R code seems daunting but most of it is just to get data in and out of R.
 IRanges and IGraph are solid packages with many options, including
 by processing. It looks like they are optimized for speed.
@@ -125,6 +127,11 @@ HERE ARE THE ONLY OVERLAPS
                 |_|
 ;
 
+
+*******************************************************
+1. Using R IRanges(for overlaps) and IGraph(linking)  *
+*******************************************************
+
 Observations that overlab
 
 SD1.WANT total obs=3
@@ -146,13 +153,24 @@ WORK.WANT total obs=2
    1       B:D:F
    1       A:E
 
+******************************************************
+2. Pure SAS does not do the final linking by PGStats *
+******************************************************
+
+ WORK.WANT total obs=3
+
+  ID    NDRUGS    DRUGLIST    DURATION    STARTDATE    ENDDATE
+
+   1       2        A-E          19         18322       18340
+   1       2        B-D          31         17929       17959
+   1       2        B-F          27         17962       17988
 *
  _ __  _ __ ___   ___ ___  ___ ___
 | '_ \| '__/ _ \ / __/ _ \/ __/ __|
 | |_) | | | (_) | (_|  __/\__ \__ \
 | .__/|_|  \___/ \___\___||___/___/
 |_|
-;  \
+;
 
 *******************************************************
 1. Using R IRanges(for overlaps) and IGraph(linking)  *
@@ -337,4 +355,6 @@ if last.seq then do;
 format startDate endDate yymmdd10.;
 keep id nDrugs drugList startDate endDate duration;
 run;
+
+
 
